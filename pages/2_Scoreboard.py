@@ -44,7 +44,8 @@ st.markdown("""
     
     .block-container { padding-top: 2rem !important; padding-bottom: 5rem !important; }
     #MainMenu, footer, header { visibility: hidden; }
-/* הסתרת התפריט הצדדי לחלוטין */
+    
+    /* הסתרת התפריט הצדדי לחלוטין */
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="stSidebarNav"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
