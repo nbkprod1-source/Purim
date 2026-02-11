@@ -30,13 +30,13 @@ st.markdown("""
     p, .stMarkdown { color: #E0E0E0 !important; text-align: center !important; }
     div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; margin-bottom: 20px;}
     
-    .stButton button { background: linear-gradient(45deg, #FFD700, #FFC000, #E6AC00); color: #020140; font-weight: 700; font-size: 18px; border-radius: 12px; border: none; width: 100%; padding: 0.6rem 1rem; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); transition: all 0.3s ease; }
+    .stButton button { background: linear-gradient(45deg, #FFD700, #FFC000, #E6AC00); color: #020140; font-weight: 700; font-size: 16px; border-radius: 10px; border: none; width: 100%; padding: 0.5rem; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); transition: all 0.3s ease; }
     .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6); }
     
     .block-container { padding-top: 2rem !important; padding-bottom: 5rem !important; }
     div[data-testid="stImage"] img { border-radius: 15px; } 
     
-    div[data-testid="stTextInput"] input { background-color: rgba(255, 255, 255, 0.9) !important; border-radius: 10px; border: none; color: #020140 !important; font-weight: bold; direction: rtl; text-align: right; font-size: 16px; padding: 12px;}
+    div[data-testid="stTextInput"] input { background-color: rgba(255, 255, 255, 0.9) !important; border-radius: 10px; border: none; color: #020140 !important; font-weight: bold; direction: rtl; text-align: right; font-size: 16px; padding: 10px;}
     
     div[role="radiogroup"] { display: flex; justify-content: space-around; background: rgba(0, 0, 0, 0.3); padding: 15px 5px; border-radius: 15px; border: 1px solid rgba(255, 215, 0, 0.3); margin-bottom: 15px;}
     div[role="radiogroup"] label { font-size: 18px !important; color: white !important; font-weight: bold; cursor: pointer; }
@@ -48,12 +48,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- אתחול משתני סשן ---
 if 'voted_for' not in st.session_state:
     st.session_state.voted_for = set()
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 0
 if 'search_input' not in st.session_state:
     st.session_state.search_input = ""
+if 'last_search' not in st.session_state:
+    st.session_state.last_search = ""
+
+# הפונקציה התקנית לניקוי החיפוש
+def clear_search():
+    st.session_state.search_input = ""
+    st.session_state.current_page = 0
 
 if os.path.exists(LOGO_FILENAME):
     st.image(LOGO_FILENAME, use_container_width=True)
@@ -65,29 +73,38 @@ df = load_data()
 if df.empty:
     st.warning("אין נרשמים עדיין.")
 else:
-    # --- חיפוש עם כפתור נקה ---
-    st.markdown("<p style='text-align: right; color: #FFD700 !important; font-weight: bold; margin-bottom: 5px;'>חיפוש מתמודד:</p>", unsafe_allow_html=True)
-    col_search, col_clear = st.columns([4, 1])
+    # --- שורת חיפוש מעוצבת ---
+    st.markdown("<p style='text-align: right; color: #FFD700 !important; font-weight: bold; margin-bottom: 5px;'>חפש מתמודד:</p>", unsafe_allow_html=True)
+    col_search, col_btn_s, col_btn_c = st.columns([3, 1, 1])
     
     with col_search:
-        search_query = st.text_input(
+        st.text_input(
             "חיפוש", 
-            placeholder="🔍 הקלד שם או תחפושת...", 
+            placeholder="הקלד שם או תחפושת...", 
             key="search_input", 
             label_visibility="collapsed"
         )
         
-    with col_clear:
-        if st.button("✖️ נקה"):
-            st.session_state.search_input = ""
-            st.rerun()
+    with col_btn_s:
+        # כפתור שמפעיל רענון כדי לקלוט את החיפוש
+        st.button("🔍 חפש", use_container_width=True)
+        
+    with col_btn_c:
+        # שימוש בפונקציית הניקוי
+        st.button("✖️ נקה", on_click=clear_search, use_container_width=True)
     
-    # --- התיקון לשגיאת ה-AttributeError ---
+    search_query = st.session_state.search_input
+    
+    # איפוס עמוד אם החיפוש השתנה
+    if search_query != st.session_state.last_search:
+        st.session_state.current_page = 0
+        st.session_state.last_search = search_query
+    
+    # ביצוע הסינון בפועל
     if search_query:
         mask_names = df['names'].astype(str).str.contains(search_query, case=False, na=False)
         mask_costume = df['costume_name'].astype(str).str.contains(search_query, case=False, na=False)
         df = df[mask_names | mask_costume]
-        st.session_state.current_page = 0 
     
     if df.empty:
         st.info("לא נמצאו מתמודדים התואמים לחיפוש שלך.")
@@ -104,7 +121,7 @@ else:
         current_df = df.iloc[start_idx:end_idx]
         
         # --- ניווט עליון ---
-        if total_pages > 1 and not search_query:
+        if total_pages > 1:
             col1, col2, col3 = st.columns([1, 1.5, 1])
             with col1:
                 if st.button("⬅️ הבא", key="next_top", disabled=(st.session_state.current_page >= total_pages - 1)):
@@ -156,7 +173,7 @@ else:
                             st.rerun()
 
         # --- ניווט תחתון ---
-        if total_pages > 1 and len(current_df) > 3 and not search_query:
+        if total_pages > 1 and len(current_df) > 3:
             st.markdown("---")
             col1, col2, col3 = st.columns([1, 1.5, 1])
             with col1:
