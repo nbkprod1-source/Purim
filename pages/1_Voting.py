@@ -52,6 +52,8 @@ if 'voted_for' not in st.session_state:
     st.session_state.voted_for = set()
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 0
+if 'search_input' not in st.session_state:
+    st.session_state.search_input = ""
 
 if os.path.exists(LOGO_FILENAME):
     st.image(LOGO_FILENAME, use_container_width=True)
@@ -63,12 +65,27 @@ df = load_data()
 if df.empty:
     st.warning("אין נרשמים עדיין.")
 else:
-    # --- חיפוש ---
-    search_query = st.text_input("🔍 חפש לפי שם או תחפושת...", "")
+    # --- חיפוש עם כפתור נקה ---
+    st.markdown("<p style='text-align: right; color: #FFD700 !important; font-weight: bold; margin-bottom: 5px;'>חיפוש מתמודד:</p>", unsafe_allow_html=True)
+    col_search, col_clear = st.columns([4, 1])
     
+    with col_search:
+        search_query = st.text_input(
+            "חיפוש", 
+            placeholder="🔍 הקלד שם או תחפושת...", 
+            key="search_input", 
+            label_visibility="collapsed"
+        )
+        
+    with col_clear:
+        if st.button("✖️ נקה"):
+            st.session_state.search_input = ""
+            st.rerun()
+    
+    # --- התיקון לשגיאת ה-AttributeError ---
     if search_query:
-        mask_names = df['names'].str.contains(search_query, case=False, na=False)
-        mask_costume = df['costume_name'].str.contains(search_query, case=False, na=False)
+        mask_names = df['names'].astype(str).str.contains(search_query, case=False, na=False)
+        mask_costume = df['costume_name'].astype(str).str.contains(search_query, case=False, na=False)
         df = df[mask_names | mask_costume]
         st.session_state.current_page = 0 
     
@@ -131,3 +148,24 @@ else:
                         
                         if not match_df.empty:
                             orig_index = match_df.index[0]
+                            original_df.at[orig_index, "total_score"] += vote_val
+                            original_df.at[orig_index, "votes_count"] += 1
+                            save_data(original_df)
+                            
+                            st.session_state.voted_for.add(contestant_id)
+                            st.rerun()
+
+        # --- ניווט תחתון ---
+        if total_pages > 1 and len(current_df) > 3 and not search_query:
+            st.markdown("---")
+            col1, col2, col3 = st.columns([1, 1.5, 1])
+            with col1:
+                if st.button("⬅️ הבא", key="next_bottom", disabled=(st.session_state.current_page >= total_pages - 1)):
+                    st.session_state.current_page += 1
+                    st.rerun()
+            with col2:
+                st.markdown(f"<h4 style='color: #FFD700 !important; margin-top: 10px;'>עמוד {st.session_state.current_page + 1} מתוך {total_pages}</h4>", unsafe_allow_html=True)
+            with col3:
+                if st.button("הקודם ➡️", key="prev_bottom", disabled=(st.session_state.current_page == 0)):
+                    st.session_state.current_page -= 1
+                    st.rerun()
