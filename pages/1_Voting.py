@@ -27,7 +27,10 @@ st.markdown("""
     .stButton button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6); }
     .block-container { padding-top: 2rem !important; padding-bottom: 5rem !important; }
     #MainMenu, footer, header { visibility: hidden; }
-    [data-testid="collapsedControl"] { display: none; }
+/* הסתרת התפריט הצדדי לחלוטין */
+    [data-testid="stSidebar"] { display: none !important; }
+    [data-testid="stSidebarNav"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
